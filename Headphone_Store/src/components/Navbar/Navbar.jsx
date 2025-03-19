@@ -42,7 +42,7 @@ export const Navbar = () => {
             <div>
                 <a href='#' className='text-xl font-bold uppercase' >
                     Playing /{" "}
-                    <span className='font-extralight text-white 70'>Market</span>
+                    <span className='font-extralight text-white/70'>Market</span>
                 </a>
             </div>
             {/*____Menu section____*/}
@@ -89,8 +89,7 @@ export const Navbar = () => {
         </motion.nav>
         </div>
     </>
-    
-  )
-}
+  );
+};
 
 export default Navbar;

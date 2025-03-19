@@ -40,7 +40,7 @@ const headphoneData = [
   {
     id: 1,
     image: Headphone1,
-    title: "Headphones Wireless",
+    title: "Headphones Wireless 1",
     subtitle:
       "Lorem ipsum dolor sit amet consectetur adipisicing elit. Repellendus praesentium consequatur tempore iusto nam. Accusantium.",
     price: "￥1,399",
@@ -107,12 +107,12 @@ const Hero = () => {
               </AnimatePresence>
               <AnimatePresence mode="wait">
                 <motion.p 
-                  key={activeData.id}
+                  className='text-sm leading-loose text-white/80'
                   variants={fadeUP(0.3)}
+                  key={activeData.id}
                   initial="hidden"
                   animate="show"
                   exit="exit"
-                  className='text-sm leading-loose text-white/80'
                   >
                 {activeData.subtitle}
                 </motion.p>
@@ -128,7 +128,7 @@ const Hero = () => {
                     scale:6,
                     
                     backgroundElement:<div>
-                      <img src={activeData.image}/>
+                      <img src={activeData.image} aly=""/>
                     </div>
                   }}
                 >
@@ -155,34 +155,52 @@ const Hero = () => {
               <div className='grid grid-cols-3 gap-10'>
                 {headphoneData.map((item)=>{
                   return(
+                    <UpdateFollower
+                    key={item.id}  
+                    mouseOptions={{
+                      backgroundColor:item.bgColor,
+                      zIndex:9999,
+                      followSpeed:0.5,
+                      scale:5,
+                      text:"View Details",
+                      textFontSize:"3px", 
+                    }}>
                     <div 
-                    key={item.id} 
-                    onClick={()=>handleActiveData
-                    (item)} 
-                    className='grid grid-cols-2 place-items-center cursor-pointer'>
+                    onClick={()=>handleActiveData(item)} 
+                      className='grid grid-cols-2 place-items-center cursor-pointer'>
                       <div>
-                        <img src={item.image} alt=" " className='w-[200px]'/>
+                        <img src={item.image} alt="" className='w-[200px]'/>
                       </div>
                       <div className='space-y-2'>
                         <p className='text-base font-bold'>{item.price}</p>
                         <p className='text-xs font-normal text-nowrap'>{item.modal}</p>
                       </div>
                     </div>
+                    </UpdateFollower>
                   );
                 })}
               </div>
             </div>
           </div>  
-
           {/* Hero Image */}
           <div className='flex flex-col justify-end items-center'>
-            <img src={activeData.image} alt=" " className='w=[300px] ma:w-[400px] xl:w-[550px]'/>
+          <AnimatePresence mode='wait'>
+            <motion.img 
+            key={activeData.id}
+            initial={{opacity:0,scale:0.9,y:100}}
+            animate={{opacity:1,scale:1,y:0}}
+            transition={{duration:0.4,delay:0.2,ease:easeInOut}}
+            exit={{opacity:0,scale:0.9,y:100,
+              transition:{duration:0.2,},
+            }}
+            src={activeData.image} alt=" " className='w=[300px] ma:w-[400px] xl:w-[550px]'/>
+          </AnimatePresence>
           </div>
 
           {/* WhatsAPP icon */}
-          <div>
-            <a href=''>
-              <FaWhatsapp className='text-3xl text-white fixed bottom-10 right-10 hover:rotate-[360deg] duration-500 z-[99999] mix-blend-difference'/>
+          <div className='text-3xl text-white fixed bottom-10 right-10 hover:rotate-[360deg] duration-500 z-[99999] mix-blend-difference'>
+            <a href='#'>
+              <FaWhatsapp />
             </a>
           </div>
         </div>
@@ -192,3 +210,4 @@ const Hero = () => {
 }
 
 export default Hero
+
