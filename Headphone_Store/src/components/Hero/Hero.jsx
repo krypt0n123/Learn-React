@@ -70,8 +70,7 @@ const headphoneData = [
 ];
 
 const Hero = () => {
-  const [activeData,setActiveData] = React.useState
-  (headphoneData[0]);
+  const [activeData,setActiveData] = React.useState(headphoneData[0]);
 
   const handleActiveData=(data)=>{
     setActiveData(data);
