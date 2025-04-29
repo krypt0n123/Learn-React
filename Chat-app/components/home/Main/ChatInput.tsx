@@ -37,7 +37,7 @@ export const ChatInput = () => {
             href='https://chat.deepseek.com/'
             target="_blank"
           >
-            krypton
+            deepseek
           </a>
           .&nbsp;基于第三方提供的接口
         </footer>
