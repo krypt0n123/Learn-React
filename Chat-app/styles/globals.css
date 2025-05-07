@@ -1,8 +1,7 @@
-@tailwind utilities;
 @import "tailwindcss";
 
 html,
-body{
+body {
   height: 100%;
   font-size: 16px;
 }

@@ -25,7 +25,7 @@ export const ChatInput = () => {
             rows={1}
           />
           <Button
-            className='mx-3 !rounded-lg'
+            className='mx-3 !rounded-lg bg-green-400'
             icon={FiSend}
             variant='primary'
           />
