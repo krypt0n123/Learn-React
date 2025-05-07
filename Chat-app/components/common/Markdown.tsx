@@ -4,7 +4,11 @@ import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { a11yDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 
-function Markdown({ children, className = "", ...props }: Options) {
+interface MarkdownProps extends Options {
+  className?: string
+}
+
+function Markdown({ children, className = "", ...props }: MarkdownProps) {
   return (
     <div className={`markdown prose dark:prose-invert ${className}`}>
       <ReactMarkdown
