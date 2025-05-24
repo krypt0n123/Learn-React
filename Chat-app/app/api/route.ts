@@ -1,6 +1,15 @@
 import { NextResponse, NextRequest } from "next/server";
 
-export async function GET(request: NextRequest) {
-  const {url} = request
-  return NextResponse.json({url})
+export async function POST(request: NextRequest) {
+  const {messageText} = await request.json()
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller){
+      for(let i=0;i<messageText.length;i++){
+        controller.enqueue(encoder.encode(messageText[i]))
+      }
+      controller.close()
+    }
+  })
+  return new Response(stream)
 }
