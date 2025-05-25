@@ -1,4 +1,5 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest } from "next/server";
+import { sleep } from "@/common/util";
 
 export async function POST(request: NextRequest) {
   const {messageText} = await request.json()
@@ -6,10 +7,11 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream({
     async start(controller){
       for(let i=0;i<messageText.length;i++){
+        await sleep(100)
         controller.enqueue(encoder.encode(messageText[i]))
       }
       controller.close()
     }
   })
   return new Response(stream)
-}
+} 
