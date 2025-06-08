@@ -5,6 +5,7 @@ export type State = {
   themeMode: "dark" | "light"
   currentModel: string
   messageList: Message[]
+  streamingID:string
 }
 
 export enum ActionType {
@@ -29,7 +30,9 @@ export type Action = UpdateAction | MessageAction
 export const initState: State = {
   displayNavigation: true,
   themeMode: "light",
-  currentModel: "gpt-3.5-turbo"
+  currentModel: "gpt-3.5-turbo",
+  messageList: [],
+  streamingID: ""
 }
 
 export function reducer(state: State, action: Action) {

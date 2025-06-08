@@ -1,4 +1,4 @@
-import { ChatInput } from "./ChatInput"
+import ChatInput from "./ChatInput"
 import Menu from "./Menu"
 import { MessageList } from "./MessageList"
 
