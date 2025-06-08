@@ -4,18 +4,34 @@ import { PiLightningFill } from "react-icons/pi"
 import { FiSend } from 'react-icons/fi'
 import TextareaAutoSize from 'react-textarea-autosize'
 import { useState } from 'react'
+import {v4 as uuidv4} from 'uuid'
+import { Message, MessageRequestBody } from '@/types/chat'
+import { useAppContext } from '@/components/AppContext'
+import { ActionType } from '@/reducers/AppReducer'
 
 export const ChatInput = () => {
   const [messageText, setMessageText] = useState('')
+  const {
+    state:{messageList,currentModel},
+    dispatch
+  } = useAppContext()
 
   async function send(){
-    const body = JSON.stringify({messageText})
+    const message:Message={
+      id:uuidv4(),
+      role:"user",
+      content:messageText
+    }
+    const messages =messageList.concat([message])
+    const body:MessageRequestBody = {messages,model:currentModel}
+    dispatch({type:ActionType.ADD_MESSAGE,message})
+    setMessageText("")
     const response = await fetch("api/chat",{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
       },
-      body
+      body:JSON.stringify(body)
     })
     if(!response.ok){
       console.log(response.statusText)
@@ -25,14 +41,25 @@ export const ChatInput = () => {
       console.log("body error")
       return
     }
+    const responseMessage:Message={
+      id:uuidv4(),
+      role:"assistant",
+      content:""
+    }
+    dispatch({type:ActionType.ADD_MESSAGE,message:responseMessage})
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let done= false
+    let content = ""
     while(!done){
       const result =await reader.read()
       done=result.done
       const chunk =decoder.decode(result.value)
-      console.log(chunk)
+      content +=chunk
+      dispatch({
+        type:ActionType.UPDATE_MESSAGE,
+        message:{...responseMessage,content}
+      })
     }
     setMessageText("")
   }

@@ -1,7 +1,16 @@
 This repository is used to document the projects I created while learning React.
 
 # TodoList
-![todolish](../Learn-React/assert/todolist.png)
+<p align="center">
+  <img src="./assert/todolist.png" alt="new" width="500" style="border-radius: 6px";/>
+  <br>
+</p>
+
+
 
 # Headphone_Store
-![todolish](../Learn-React/assert/headphonestore.png)
+<p align="center">
+  <img src="./assert/headphonestore.png" alt="new" width="500" style="border-radius: 6px";/>
+  <br>
+</p>
+
