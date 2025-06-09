@@ -11,94 +11,138 @@ import { ActionType } from "@/reducers/AppReducer"
 
 export default function ChatInput() {
   const [messageText, setMessageText] = useState("")
-  const stopRef =useRef(false)
+  const stopRef = useRef(false)
   const {
     state: { messageList, currentModel, streamingID },
     dispatch
   } = useAppContext()
 
-  async function send() {
-    const message: Message = {
-      id: uuidv4(),
-      role: "user",
-      content: messageText
-    }
-    dispatch({ type: ActionType.ADD_MESSAGE, message })
-    const messages = messageList.concat([message])
-    doSend(messages)
-  }
-
-  async function resend() {
-    const messages =[...messageList]
-    if(
-      messages.length !==0 && 
-      messages[messages.length - 1].role ==="assistant"
-    ){
-      dispatch({
-        type:ActionType.REMOVE_MESSAGE,
-        message:messages[messages.length-1]
-      })
-      messages.splice(messages.length - 1,1)
-    }
-    doSend(messages)
-  }
-
-  async function doSend(messages:Message[]) {
-    
-    const body: MessageRequestBody = { messages, model: currentModel }
-    setMessageText("")
-    const controller=new AbortController()
-    const response = await fetch("/api/chat", {
+  async function createOrUpdateMessage(message: Message) {
+    const response = await fetch("/api/message/update", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      signal: controller.signal,
-      body: JSON.stringify(body)
-    })
+      body: JSON.stringify(message)
+    });
     if (!response.ok) {
       console.log(response.statusText)
       return
     }
-    if (!response.body) {
-      console.log("body error")
-      return
-    }
-    const responseMessage: Message = {
-      id: uuidv4(),
-      role: "assistant",
-      content: ""
-    }
-    dispatch({ type: ActionType.ADD_MESSAGE, message: responseMessage })
-    dispatch({
-      type: ActionType.UPDATE,
-      field: "streamingID",
-      value: responseMessage.id
-    })
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let done = false
-    let content = ""
-    while (!done) {
-      if(stopRef.current){
-        stopRef.current=false
-        controller.abort()
-        break
+    const { data } = await response.json()
+    return data.message
+  }
+
+  async function send() {
+    try {
+      const message = await createOrUpdateMessage({
+        id: "",
+        role: "user",
+        content: messageText,
+        chatId: ""
+      });
+
+      if (message) {
+        dispatch({ type: ActionType.ADD_MESSAGE, message });
+        const messages = messageList.concat([message]);
+        await doSend(messages);
       }
-      const result = await reader.read()
-      done = result.done
-      const chunk = decoder.decode(result.value)
-      content += chunk
-      dispatch({
-        type: ActionType.UPDATE_MESSAGE,
-        message: { ...responseMessage, content }
-      })
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // You might want to show an error message to the user here
     }
-    dispatch({
-      type: ActionType.UPDATE,
-      field: "streamingID",
-      value: ""
-    })
+  }
+
+  async function resend() {
+    const messages = [...messageList]
+    if (
+      messages.length !== 0 &&
+      messages[messages.length - 1].role === "assistant"
+    ) {
+      dispatch({
+        type: ActionType.REMOVE_MESSAGE,
+        message: messages[messages.length - 1]
+      })
+      messages.splice(messages.length - 1, 1)
+    }
+    doSend(messages)
+  }
+
+  async function doSend(messages: Message[]) {
+    try {
+      const body: MessageRequestBody = { messages, model: currentModel }
+      setMessageText("")
+      const controller = new AbortController()
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        signal: controller.signal,
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        console.log(`HTTP error! status: ${response.status}`);
+      }
+
+      if (!response.body) {
+        throw new Error("Response body is empty");
+      }
+
+      const responseMessage: Message = {
+        id: uuidv4(),
+        role: "assistant",
+        content: "",
+        chatId:"" // Use the same chatId as the user message
+      }
+
+      dispatch({ type: ActionType.ADD_MESSAGE, message: responseMessage })
+      dispatch({
+        type: ActionType.UPDATE,
+        field: "streamingID",
+        value: responseMessage.id
+      })
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let done = false
+      let content = ""
+
+      try {
+        while (!done) {
+          if (stopRef.current) {
+            stopRef.current = false
+            controller.abort()
+            break
+          }
+          const result = await reader.read()
+          done = result.done
+          const chunk = decoder.decode(result.value)
+          content += chunk
+          dispatch({
+            type: ActionType.UPDATE_MESSAGE,
+            message: { ...responseMessage, content }
+          })
+        }
+      } catch (error: any) {
+        if (error?.name === 'AbortError') {
+          console.log('Stream was stopped by user');
+        } else {
+          throw error;
+        }
+      } finally {
+        dispatch({
+          type: ActionType.UPDATE,
+          field: "streamingID",
+          value: ""
+        })
+      }
+    } catch (error) {
+      console.error('Error in streaming chat:', error);
+      // You might want to show an error message to the user here
+    }
   }
 
   return (
@@ -109,8 +153,8 @@ export default function ChatInput() {
             <Button
               icon={PiStopBold}
               variant='primary'
-              onClick={()=>{
-                stopRef.current=true
+              onClick={() => {
+                stopRef.current = true
               }}
               className='font-medium bg-green-400'
             >
@@ -120,7 +164,7 @@ export default function ChatInput() {
             <Button
               icon={MdRefresh}
               variant='primary'
-              onClick={()=>{
+              onClick={() => {
                 resend()
               }}
               className='font-medium bg-green-400'
