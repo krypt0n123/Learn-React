@@ -18,38 +18,54 @@ export default function ChatInput() {
   } = useAppContext()
 
   async function createOrUpdateMessage(message: Message) {
-    const response = await fetch("/api/message/update", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(message)
-    });
-    if (!response.ok) {
-      console.log(response.statusText)
-      return
+    try {
+      const response = await fetch("/api/message/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(message),
+        cache: 'no-store'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.error || errorData.message || response.statusText);
+      }
+
+      const data = await response.json();
+      return data.data.message;
+    } catch (error) {
+      console.error('Error in createOrUpdateMessage:', error);
+      throw error;
     }
-    const { data } = await response.json()
-    return data.message
   }
 
   async function send() {
     try {
-      const message = await createOrUpdateMessage({
-        id: "",
-        role: "user",
-        content: messageText,
-        chatId: ""
-      });
+      if (!messageText.trim()) {
+        return;
+      }
+
+      const messageData: Message = {
+        id: uuidv4(),
+        role: "user" as const,
+        content: messageText.trim(),
+        chatId: messageList.length > 0 && messageList[0].chatId ? messageList[0].chatId : ""
+      };
+
+      const message = await createOrUpdateMessage(messageData);
 
       if (message) {
         dispatch({ type: ActionType.ADD_MESSAGE, message });
+        setMessageText("");
         const messages = messageList.concat([message]);
         await doSend(messages);
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      // You might want to show an error message to the user here
+      alert('发送消息失败：' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
