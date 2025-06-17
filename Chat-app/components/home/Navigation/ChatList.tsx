@@ -1,7 +1,8 @@
 import { groupByDate } from "@/common/util"
 import { Chat } from "@/types/chat"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import ChatItem from "./ChatItem"
+import { useEventBusContext } from "@/components/EventBusContext"
 
 export default function ChatList() {
   const [chatList, setChatList] = useState<Chat[]>([
@@ -69,22 +70,22 @@ export default function ChatList() {
       id: "13",
       title: "如何使用Next.js创建React项目",
       updateTime: Date.now() - 1000 * 60 * 60 * 24 * 2
-    },
-    {
-      id: "14",
-      title: "如何使用Next.js创建React项目",
-      updateTime: Date.now() - 1000 * 60 * 60 * 24 * 2
-    },
-    {
-      id: "15",
-      title: "知行小课",
-      updateTime: Date.now() + 2
     }
   ])
   const [selectedChat, setSelectedChat] = useState<Chat>()
   const groupList = useMemo(() => {
     return groupByDate(chatList)
   }, [chatList])
+  const { subscribe, unsubscribe } = useEventBusContext()
+
+  useEffect(() => {
+    const callback: EventListener = () => {
+      console.log("fetchChatList")
+    }
+    subscribe("fetchChatList", callback)
+    return () => unsubscribe("fetchChatList", callback)
+  }, [])
+
   return (
     <div className='flex-1 mb-[48px] mt-2 flex flex-col overflow-y-auto'>
       {groupList.map(([date, list]) => {
@@ -97,14 +98,14 @@ export default function ChatList() {
               {list.map((item) => {
                 const selected = selectedChat?.id === item.id
                 return (
-                  <ChatItem 
-                    key={item.id} 
-                    item={item} 
-                    selected={selected} 
-                    onSelected={(chat) =>{
+                  <ChatItem
+                    key={item.id}
+                    item={item}
+                    selected={selected}
+                    onSelected={(chat) => {
                       setSelectedChat(chat)
                     }
-                  } />
+                    } />
                 )
               })}
             </ul>

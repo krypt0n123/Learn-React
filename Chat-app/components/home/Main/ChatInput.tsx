@@ -8,14 +8,17 @@ import { v4 as uuidv4 } from "uuid"
 import { Message, MessageRequestBody } from "@/types/chat"
 import { useAppContext } from "@/components/AppContext"
 import { ActionType } from "@/reducers/AppReducer"
+import { useEventBusContext } from "@/components/EventBusContext"
 
 export default function ChatInput() {
   const [messageText, setMessageText] = useState("")
   const stopRef = useRef(false)
+  const chatIdRef = useRef("")
   const {
     state: { messageList, currentModel, streamingID },
     dispatch
   } = useAppContext()
+  const { publish } = useEventBusContext()
 
   async function createOrUpdateMessage(message: Message) {
     try {
@@ -35,11 +38,30 @@ export default function ChatInput() {
       }
 
       const data = await response.json();
+      if (data.data?.message?.chatId && !chatIdRef.current) {
+        chatIdRef.current = data.data.message.chatId;
+        publish("fetchChatList")
+      }
       return data.data.message;
     } catch (error) {
       console.error('Error in createOrUpdateMessage:', error);
       throw error;
     }
+  }
+
+  async function deleteMessage(id: string) {
+    const response = await fetch(`/api/message/delete?id=${id}`, {
+      method: "POST",
+      headers: {
+        "Content-type": "applicarion/json"
+      }
+    })
+    if (!response.ok) {
+      console.log(response.statusText)
+      return
+    }
+    const { code } = await response.json()
+    return code === 0
   }
 
   async function send() {
@@ -52,7 +74,7 @@ export default function ChatInput() {
         id: uuidv4(),
         role: "user" as const,
         content: messageText.trim(),
-        chatId: messageList.length > 0 && messageList[0].chatId ? messageList[0].chatId : ""
+        chatId: chatIdRef.current
       };
 
       const message = await createOrUpdateMessage(messageData);
@@ -75,6 +97,11 @@ export default function ChatInput() {
       messages.length !== 0 &&
       messages[messages.length - 1].role === "assistant"
     ) {
+      const result = await deleteMessage(messages[messages.length - 1].id)
+      if (!result) {
+        console.log("delete error")
+        return
+      }
       dispatch({
         type: ActionType.REMOVE_MESSAGE,
         message: messages[messages.length - 1]
@@ -107,12 +134,12 @@ export default function ChatInput() {
         throw new Error("Response body is empty");
       }
 
-      const responseMessage: Message = {
+      const responseMessage: Message = await createOrUpdateMessage({
         id: uuidv4(),
         role: "assistant",
-        content: "",
-        chatId:"" // Use the same chatId as the user message
-      }
+        content: "正在思考中...",
+        chatId: chatIdRef.current
+      })
 
       dispatch({ type: ActionType.ADD_MESSAGE, message: responseMessage })
       dispatch({
@@ -149,6 +176,7 @@ export default function ChatInput() {
           throw error;
         }
       } finally {
+        createOrUpdateMessage({ ...responseMessage, content })
         dispatch({
           type: ActionType.UPDATE,
           field: "streamingID",
