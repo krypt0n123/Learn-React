@@ -134,12 +134,12 @@ export default function ChatInput() {
         throw new Error("Response body is empty");
       }
 
-      const responseMessage: Message = await createOrUpdateMessage({
+      const responseMessage: Message = {
         id: uuidv4(),
         role: "assistant",
-        content: "正在思考中...",
+        content: "",
         chatId: chatIdRef.current
-      })
+      }
 
       dispatch({ type: ActionType.ADD_MESSAGE, message: responseMessage })
       dispatch({
@@ -176,7 +176,18 @@ export default function ChatInput() {
           throw error;
         }
       } finally {
-        createOrUpdateMessage({ ...responseMessage, content })
+        if (content) {
+          const savedMessage = await createOrUpdateMessage({
+            id: responseMessage.id,
+            role: "assistant",
+            content: content,
+            chatId: chatIdRef.current
+          });
+          dispatch({
+            type: ActionType.UPDATE_MESSAGE,
+            message: savedMessage
+          });
+        }
         dispatch({
           type: ActionType.UPDATE,
           field: "streamingID",

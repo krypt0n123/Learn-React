@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@/app/generated/prisma";
+import { prism } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,16 @@ export async function POST(request: NextRequest) {
                 }
             });
             chatId = chat.id;
-        } else {
+        } 
+        else {
+            await prisma.chat.update({
+                data:{
+                    updateTime:new Date()
+                },
+                where:{
+                    id:chatId
+                }
+            })
             chat = await prisma.chat.findUnique({
                 where: { id: chatId }
             });
