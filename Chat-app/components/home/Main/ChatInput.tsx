@@ -3,7 +3,7 @@ import { MdRefresh } from "react-icons/md"
 import { PiLightningFill, PiStopBold } from "react-icons/pi"
 import { FiSend } from "react-icons/fi"
 import TextareaAutoSize from "react-textarea-autosize"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { Message, MessageRequestBody } from "@/types/chat"
 import { useAppContext } from "@/components/AppContext"
@@ -15,10 +15,18 @@ export default function ChatInput() {
   const stopRef = useRef(false)
   const chatIdRef = useRef("")
   const {
-    state: { messageList, currentModel, streamingID },
+    state: { messageList, currentModel, streamingID, selectedChat },
     dispatch
   } = useAppContext()
   const { publish } = useEventBusContext()
+
+  useEffect(() => {
+    if (chatIdRef.current === selectedChat?.id) {
+      return
+    }
+    chatIdRef.current = selectedChat?.id ?? ""
+    stopRef.current = true
+  }, [selectedChat])
 
   async function createOrUpdateMessage(message: Message) {
     try {
@@ -41,6 +49,11 @@ export default function ChatInput() {
       if (data.data?.message?.chatId && !chatIdRef.current) {
         chatIdRef.current = data.data.message.chatId;
         publish("fetchChatList")
+        dispatch({
+          type: ActionType.UPDATE,
+          field: "selectedChat",
+          value: {id:chatIdRef.current}
+        })
       }
       return data.data.message;
     } catch (error) {
@@ -112,6 +125,7 @@ export default function ChatInput() {
   }
 
   async function doSend(messages: Message[]) {
+    stopRef.current = false
     try {
       const body: MessageRequestBody = { messages, model: currentModel }
       setMessageText("")
@@ -156,7 +170,6 @@ export default function ChatInput() {
       try {
         while (!done) {
           if (stopRef.current) {
-            stopRef.current = false
             controller.abort()
             break
           }
