@@ -34,11 +34,11 @@ export const Example = () => {
             <p className="p-2">...</p>
             <div className="flex items-center w-full space-x-2">
               <hr className="flex-1 border-t border-dotted border-gray-200 dark:border-gray-600" />
-              <Button onClick={() => {
-                setshowFull(true)
-              }}>
-                显示全部
-              </Button>
+                <Button onClick={() => {
+                  setshowFull(true)
+                }}>
+                  显示全部
+                </Button>
               <hr className="flex-1 border-t border-dotted border-gray-200 dark:border-gray-600" />
             </div>
           </>

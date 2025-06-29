@@ -38,7 +38,7 @@ export default function ChatInput() {
         },
         body: JSON.stringify(message),
         cache: 'no-store'
-      });
+      })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
