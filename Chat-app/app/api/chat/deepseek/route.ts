@@ -15,27 +15,47 @@ export async function POST(request: NextRequest) {
 
     const response = await deepseekAPI.createChatCompletion(messages);
     
-    // 设置响应头
+    // Set response headers for Server-Sent Events
     const headers = new Headers();
     headers.set('Content-Type', 'text/event-stream');
     headers.set('Cache-Control', 'no-cache');
     headers.set('Connection', 'keep-alive');
+    headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Access-Control-Allow-Headers', 'Cache-Control');
 
-    // 创建一个 TransformStream 来处理流数据
-    const stream = new TransformStream({
-      async transform(chunk, controller) {
-        controller.enqueue(chunk);
-      },
+    // Create a readable stream that pipes the DeepSeek response
+    const stream = new ReadableStream({
+      async start(controller) {
+        if (!response.body) {
+          controller.close();
+          return;
+        }
+
+        const reader = response.body.getReader();
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              controller.close();
+              break;
+            }
+            
+            controller.enqueue(value);
+          }
+        } catch (error) {
+          console.error('Error reading stream:', error);
+          controller.error(error);
+        }
+      }
     });
-
-    // 将 DeepSeek 的响应流传输到客户端
-    response.body?.pipeTo(stream.writable);
     
-    return new NextResponse(stream.readable, {
+    return new NextResponse(stream, {
       headers,
     });
   } catch (error) {
-    console.error('Error in chat completion:', error);
+    console.error('Error in DeepSeek chat completion:', error);
     return NextResponse.json(
       { 
         error: 'Failed to get chat completion',
@@ -44,4 +64,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+} 

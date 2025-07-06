@@ -125,13 +125,17 @@ export default function ChatInput() {
   }
 
   async function doSend(messages: Message[]) {
+    const apiEndpoint = currentModel === 'deepseek-chat' 
+      ? '/api/chat/deepseek'
+      : '/api/chat';  // 原有的 API 端点
+
     stopRef.current = false
     try {
       const body: MessageRequestBody = { messages, model: currentModel }
       setMessageText("")
       const controller = new AbortController()
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -166,6 +170,7 @@ export default function ChatInput() {
       const decoder = new TextDecoder()
       let done = false
       let content = ""
+      let buffer = ""
 
       try {
         while (!done) {
@@ -176,11 +181,39 @@ export default function ChatInput() {
           const result = await reader.read()
           done = result.done
           const chunk = decoder.decode(result.value)
-          content += chunk
-          dispatch({
-            type: ActionType.UPDATE_MESSAGE,
-            message: { ...responseMessage, content }
-          })
+          buffer += chunk
+          
+          // Parse SSE format
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || '' // Keep incomplete line in buffer
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6) // Remove 'data: ' prefix
+              
+              if (data === '[DONE]') {
+                done = true
+                break
+              }
+              
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
+                  const delta = parsed.choices[0].delta
+                  if (delta.content) {
+                    content += delta.content
+                    dispatch({
+                      type: ActionType.UPDATE_MESSAGE,
+                      message: { ...responseMessage, content }
+                    })
+                  }
+                }
+              } catch (e) {
+                // Ignore parsing errors for incomplete JSON
+                console.warn('Failed to parse SSE data:', data)
+              }
+            }
+          }
         }
       } catch (error: any) {
         if (error?.name === 'AbortError') {

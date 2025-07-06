@@ -32,7 +32,7 @@ export type Action = UpdateAction | MessageAction
 export const initState: State = {
   displayNavigation: true,
   themeMode: "light",
-  currentModel: "gpt-3.5-turbo",
+  currentModel: "deepseek-chat",
   messageList: [],
   streamingID: ""
 }
