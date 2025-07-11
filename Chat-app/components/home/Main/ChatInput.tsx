@@ -9,6 +9,7 @@ import { Message, MessageRequestBody } from "@/types/chat"
 import { useAppContext } from "@/components/AppContext"
 import { ActionType } from "@/reducers/AppReducer"
 import { useEventBusContext } from "@/components/EventBusContext"
+import { title } from "process"
 
 export default function ChatInput() {
   const [messageText, setMessageText] = useState("")
@@ -52,7 +53,7 @@ export default function ChatInput() {
         dispatch({
           type: ActionType.UPDATE,
           field: "selectedChat",
-          value: {id:chatIdRef.current}
+          value: { id: chatIdRef.current }
         })
       }
       return data.data.message;
@@ -77,6 +78,100 @@ export default function ChatInput() {
     return code === 0
   }
 
+  // 将 updateChatTitle 函数移到 send 函数外部
+  async function updateChatTitle(messages: Message[]) {
+    const message: Message = {
+      id: "",
+      role: "user",
+      content: "使用5到10个字直接返回这句话的简要主题，不要解释、不要标点、不要语气词、不要多余文本，如果没有主题，请直接返回'新对话'",
+      chatId: chatIdRef.current
+    }
+
+    const chatId = chatIdRef.current
+    const body: MessageRequestBody = {
+      messages: [...messages, message],
+      model: currentModel
+    }
+
+    const apiEndpoint = currentModel === 'deepseek-chat'
+      ? '/api/chat/deepseek'
+      : '/api/chat';  // 原有的 API 端点
+
+    const response = await fetch(apiEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      console.log(`HTTP error! status: ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error("Response body is empty");
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let done = false;
+    let buffer = "";
+    let title = "";
+
+    while (!done) {
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
+      buffer += decoder.decode(value);
+
+      // 按行处理
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // 保留未完成的行
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') {
+            done = true;
+            break;
+          }
+          try {
+            const parsed = JSON.parse(data);
+            if (
+              parsed.choices &&
+              parsed.choices[0] &&
+              parsed.choices[0].delta &&
+              parsed.choices[0].delta.content
+            ) {
+              title += parsed.choices[0].delta.content;
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+      }
+    }
+    // 不能重新赋值 response，使用新变量 response2
+    const response2 = await fetch("/api/chat/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        id: chatId,
+        title,
+        updateTime: Date.now()
+      })
+    })
+    if (!response2.ok) {
+      console.log(response2.statusText)
+      return
+    }
+    const { code } = await response2.json()
+    if (code === 0) {
+      publish("fetchChatList")
+    }
+  }
+
   async function send() {
     try {
       if (!messageText.trim()) {
@@ -97,6 +192,10 @@ export default function ChatInput() {
         setMessageText("");
         const messages = messageList.concat([message]);
         await doSend(messages);
+
+        if (!selectedChat?.title || selectedChat.title === "新对话") {
+          await updateChatTitle(messages)
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -125,7 +224,7 @@ export default function ChatInput() {
   }
 
   async function doSend(messages: Message[]) {
-    const apiEndpoint = currentModel === 'deepseek-chat' 
+    const apiEndpoint = currentModel === 'deepseek-chat'
       ? '/api/chat/deepseek'
       : '/api/chat';  // 原有的 API 端点
 
@@ -182,20 +281,20 @@ export default function ChatInput() {
           done = result.done
           const chunk = decoder.decode(result.value)
           buffer += chunk
-          
+
           // Parse SSE format
           const lines = buffer.split('\n')
           buffer = lines.pop() || '' // Keep incomplete line in buffer
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6) // Remove 'data: ' prefix
-              
+
               if (data === '[DONE]') {
                 done = true
                 break
               }
-              
+
               try {
                 const parsed = JSON.parse(data)
                 if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
